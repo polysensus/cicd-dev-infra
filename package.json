@@ -1,0 +1,5 @@
+{
+  "name": "@polysensus/cicd-dev-infra",
+  "description": "faux package mostly so we can easily tag new versions using tusk-jspkg.yml",
+  "version": "0.0.1"
+}

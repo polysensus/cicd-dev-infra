@@ -1,0 +1,9 @@
+---
+version: '3'
+silent: true
+
+tasks:
+  release:patch:
+    desc: create patch release
+    cmds:
+      - tusk -q -f js/tusk-jspkg.yml version-update {{.CLI_ARGS}}
