@@ -1,0 +1,90 @@
+interpreter: bash -c
+name: hhctl
+usage: conveniences and ergonomics for working with hardhat as an external chain
+
+options:
+  node-hostname:
+    default: "0.0.0.0"
+  node-port:
+    default: "8545"
+  node-address:
+    short: "a"
+    default: "http://localhost:8545"
+
+  workdir:
+    short: d
+    default: .local/hh
+
+  launchdir:
+    # this is a go-tusk quirk
+    environment: PWD
+
+tasks:
+
+  stop-node:
+    usage: |
+      stop (if possible) the hardhat node started via start-node
+    run:
+      - command:
+          exec: |
+            WORKDIR=$(cd ${launchdir} && pwd)/${workdir}
+            [ ! -f $WORKDIR/hh-pid ] && exit 0
+            kill -KILL $(cat $WORKDIR/hh-pid) || true
+
+  start-node:
+    usage: |
+      start (if necessary) a hardhat node listenting on ${node-address}
+    options:
+      gasprice:
+        short: g
+        default: 0
+      localdir:
+        short: d
+        default: .local/hh
+    run:
+      - command:
+          exec: |
+            WORKDIR=$(cd ${launchdir} && pwd)/${workdir}
+
+            HOSTNAME=${node-hostname}
+            PORT=${node-port}
+
+            mkdir -p ${WORKDIR}
+
+            # Start the hardhat node
+            if ! lsof -i -P -n | grep LISTEN | grep :$PORT >> /dev/null 2>&1; then
+              npx hardhat node --hostname "$HOSTNAME" --port $PORT >> ${WORKDIR}/hh-log & 2>&1
+            else
+              echo "re-using service"
+            fi
+
+            # Wait for hardhat to be ready (assumes it is hardhat on the port)
+            while ! lsof -i -P -n | grep LISTEN | grep :$PORT >> /dev/null 2>&1; do
+              echo "waiting for the hardhat node to listen on :$PORT"
+              sleep "5";
+            done
+            PID=$(lsof -i -P -n | grep LISTEN | grep :$PORT | tr -s ' ' | cut -d ' ' -f2)
+            echo "service up on $PORT (PID: $PID)"
+            echo $PID > ${WORKDIR}/hh-pid
+
+  deploy-local:
+    usage: |
+      deploy contracts to local hardhat node
+      and generate a browser localstorage value containing the contracts abi and
+      localnode provider address
+
+    options:
+      hhexport:
+        usage: filename for --export argument to npx hardhat deploy
+        short: "f"
+        default: "tests/hh-deploy.json"
+    run:
+      - command:
+          exec: |
+            set -e
+            # interperet files on the command line relative to the launchdir
+            STORAGEFILE=$(cd ${launchdir} && pwd)/${hhexport}
+
+            mkdir -p $(dirname $STORAGEFILE)
+            npx hardhat deploy --export $STORAGEFILE >> /dev/null 2>&1
+            echo "Wrote: $STORAGEFILE"
