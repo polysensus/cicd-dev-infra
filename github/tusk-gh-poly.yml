@@ -1,0 +1,55 @@
+interpreter: bash -c
+name: ghpol 
+usage: conveniences and ergonomics for working with the polysensus github organisation
+
+options:
+
+  workdir:
+    short: w
+    default: .
+
+  launchdir:
+    # this is a go-tusk quirk
+    environment: PWD
+
+  this-tusk:
+    default: "tusk -qf tusk-gh-poly.yml"
+
+tasks:
+
+  cicd:token:
+    usage: get an access token authorized as the polysensus-cicd github app installation
+    args:
+      # Typically $CICD_APP_ID
+      app-id:
+      # Typically $CICD_APP_PEM
+      app-pem:
+    run:
+      - command:
+          exec: |
+            # This TOKEN is good for installing the packages straight from git that
+            # don't need building. chaintrap-contracts requires building and must be
+            # installed as a packaged artifact instead.
+            bash -c "$(\
+                 curl https://raw.githubusercontent.com/polysensus/cicd-app-token/main/accesstoken.sh -sL)" \
+              -- "${app-id}" "${app-pem}"
+
+  pkg:versions:
+    usage: list the available package versions, latest first
+    options:
+      org:
+        default: polysensus
+      token:
+        default:
+    args:
+      repo:
+    run:
+      - command:
+          exec: |
+            TOKEN=${token}
+            [ -z "$TOKEN" ] && TOKEN=$(${this-tusk} cicd:token $CICD_APP_ID $CICD_APP_PEM)
+            curl -s \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${org}/${repo}/tags \
+              | jq -r .[].name | head -n 1
