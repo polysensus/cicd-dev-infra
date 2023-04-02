@@ -38,9 +38,6 @@ tasks:
       gasprice:
         short: g
         default: 0
-      localdir:
-        short: d
-        default: .local/hh
     run:
       - command:
           exec: |
