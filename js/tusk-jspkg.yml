@@ -61,6 +61,8 @@ tasks:
             PYEND
             )
             cp package.json.new package.json
+            # ensure a new line
+            echo "" >> package.json
             rm package.json.new
 
             git status -s | egrep "^\?\?" && echo "untracked files" && exit 1
